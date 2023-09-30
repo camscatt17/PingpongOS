@@ -121,9 +121,12 @@ int main (int argc, char **argv, char **envp)
    // Teste: inserir N elemementos na fila e verificar a estrutura
    printf ("Testando insercao de %d elementos...\n", N) ;
    fila0 = NULL ;
+   printf ("Atribuiu NULL para a fila\n") ;
    for (i=0; i<N; i++)
    {
+      printf("Entro aqui no for");
       assert (queue_size ((queue_t*) fila0) == i) ;
+      printf("Vai rodar a funcao");
       queue_append ((queue_t **) &fila0, (queue_t*) &item[i]) ;
       assert (fila_correta (fila0)) ;
    }

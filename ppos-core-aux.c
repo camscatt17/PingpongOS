@@ -30,6 +30,8 @@ void before_task_create (task_t *task ) {
 #ifdef DEBUG
     printf("\ntask_create - BEFORE - [%d]", task->id);
 #endif
+    printf("Vai atribuir valor pra task\n");
+    task->remaining_execution_time = 99999;
 }
 
 void after_task_create (task_t *task ) {
@@ -397,21 +399,48 @@ int after_mqueue_msgs (mqueue_t *queue) {
 }
 
 task_t * scheduler() {
-    // FCFS scheduler
-    if ( readyQueue != NULL ) {
-        // print_tcb(readyQueue);
-        printf("Entro aqui!\n");
-        task_t* aux = readyQueue;
-        while (aux->next != readyQueue) {
-            aux = aux->next;
-            printf("Ta no while\n");
+    if (readyQueue != NULL) {
+        printf("Entro na funcao scheduler\n");
+        task_t* next_task = readyQueue;
+        task_t* temp = readyQueue;
+        int shortest_time = 99999999;
+        while (temp->next != readyQueue) {
+            printf("Entro no while\n");
+            if (temp->remaining_execution_time < shortest_time) {
+                shortest_time = temp->remaining_execution_time;
+                next_task = temp;
+                printf("Entro no if\n");
+            }
+            temp = temp->next;
         }
-        // print_tcb(aux);
-        return aux;
-
-        // return readyQueue;
+        
+        return next_task;
     }
     return NULL;
 }
 
+void task_set_eet (task_t *task, int et) {
+    // if (task == NULL) {
+    //     task = current_task;     <--     COMO A GENTE CONSEGUE DETERMINAR A TASK ATUAL
+    //     task_atual->time = et
+    // }
+    task->estimated_execution_time = et;
+    task->remaining_execution_time = et;
+}
+
+
+int task_get_eet(task_t *task) {
+    // if (task == NULL) {
+    //     task_atual->time = et     <--     COMO A GENTE CONSEGUE DETERMINAR A TASK ATUAL
+    // }
+    return task->estimated_execution_time;
+}
+
+
+int task_get_ret(task_t *task) {
+    // if (task == NULL) {
+    //     task_atual->time = et     <--     COMO A GENTE CONSEGUE DETERMINAR A TASK ATUAL
+    // }
+    return task->remaining_execution_time;
+}
 

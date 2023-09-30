@@ -25,6 +25,9 @@ typedef struct task_t
    unsigned int awakeTime; // used to store the time when it should be waked up
 
    // ... (outros campos deve ser adicionados APOS esse comentario)
+   int time;
+   int estimated_execution_time;
+   int remaining_execution_time;
    
 } task_t ;
 

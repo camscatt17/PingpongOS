@@ -1,4 +1,4 @@
-#include <queue.h>
+#include "queue.h"
 #include <stdlib.h>
 #include <stdio.h>
 
@@ -11,23 +11,42 @@
 
 void queue_append(queue_t** queue, queue_t* elem){
     // Verifica se a fila existe
-    if(queue == NULL){
-        fprintf(stderr, "Erro: A fila deve existir.\n");
-        return;
-    }
-    // Verifica se o elemento existe
-    else if( elem == NULL){
-        fprintf(stderr, "Erro: O elemento deve existir.\n");
-        return;
-    }
-    else{
-        //Insere o elemento no final da fila 
-        queue_t* last = (*queue)->prev;
-        last->next = elem;
-        elem->prev = last;
-        elem->next = *queue;
-        (*queue)->prev = elem;
-    }   
+    // printf("Entro nessa funcao");
+    // if(queue == NULL){
+    //     fprintf(stderr, "Erro: A fila deve existir.\n");
+    // }
+    // // Verifica se o elemento existe
+    // else if( elem == NULL){
+    //     fprintf(stderr, "Erro: O elemento deve existir.\n");
+    // }
+    // else{
+    //     //Insere o elemento no final da fila 
+    //     printf("Vai inserir um elemento");
+    //     queue_t* last = (*queue)->prev;
+    //     printf("Achou o ultimo elemento");
+    //     last->next = elem;
+    //     elem->prev = last;
+    //     elem->next = *queue;
+    //     (*queue)->prev = elem;
+    // }   
+    // queue_t* fila_matriz = *queue;
+    // while (fila_matriz != NULL) {
+    //     queue_t* aux = fila_matriz;
+    //     while (aux != NULL) {
+    //         if (aux == elem) {
+    //             printf("O elemento estah na fila\n");
+    //             break;
+    //         }
+    //         aux = aux->next;
+    //     }
+        
+    //     fila_matriz = fila_matriz->next;
+    // }
+    
+    // (*queue)->prev;
+    // aux->next = elem;
+    // elem->prev = last;
+    // elem->next = *queue;
 }
 
 //------------------------------------------------------------------------------
