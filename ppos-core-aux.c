@@ -1,6 +1,9 @@
 #include "ppos.h"
 #include "ppos-core-globals.h"
 
+#define UNIX_PRIORIDADE_MINIMA -20
+#define UNIX_PRIORIDADE_MAXIMA 20
+
 
 // ****************************************************************************
 // Coloque aqui as suas modificações, p.ex. includes, defines variáveis, 
@@ -398,18 +401,36 @@ int after_mqueue_msgs (mqueue_t *queue) {
     return 0;
 }
 
+void task_setprio(task_t *task, int prio) {
+    if ((UNIX_PRIORIDADE_MINIMA <= prio) && (UNIX_PRIORIDADE_MAXIMA >= prio)) {
+        if (NULL != task) 
+            task->prioridade_statica = prio;
+        else
+            taskExec->prioridade_statica = prio;
+    }
+
+    return;
+}
+
+int task_getprio(task_t *task) {
+    if (task == NULL) {
+        return taskExec->prioridade_statica;
+    }
+    return task->prioridade_statica;
+}
+
 task_t * scheduler() {
     if (readyQueue != NULL) {
-        printf("Entro na funcao scheduler\n");
+        // printf("Entro na funcao scheduler\n");
         task_t* next_task = readyQueue;
         task_t* temp = readyQueue;
         int shortest_time = 99999999;
         while (temp->next != readyQueue) {
-            printf("Entro no while\n");
+            // printf("Entro no while\n");
             if (temp->remaining_execution_time < shortest_time) {
                 shortest_time = temp->remaining_execution_time;
                 next_task = temp;
-                printf("Entro no if\n");
+                // printf("Entro no if\n");
             }
             temp = temp->next;
         }
@@ -420,27 +441,33 @@ task_t * scheduler() {
 }
 
 void task_set_eet (task_t *task, int et) {
-    // if (task == NULL) {
-    //     task = current_task;     <--     COMO A GENTE CONSEGUE DETERMINAR A TASK ATUAL
-    //     task_atual->time = et
-    // }
+    if (task == NULL) {
+        printf("Entro no if da Funcao 1");
+        task = taskExec;
+        task->time = et;
+    }
+    printf("Ele ta vindo aqui? Funcao 1");
     task->estimated_execution_time = et;
     task->remaining_execution_time = et;
 }
 
 
 int task_get_eet(task_t *task) {
-    // if (task == NULL) {
-    //     task_atual->time = et     <--     COMO A GENTE CONSEGUE DETERMINAR A TASK ATUAL
-    // }
+    if (task == NULL) {
+        printf("Entro no if da Funcao 2");
+        return taskExec->estimated_execution_time;
+    }
+    printf("Ele ta vindo aqui? Funcao 2");
     return task->estimated_execution_time;
 }
 
 
 int task_get_ret(task_t *task) {
-    // if (task == NULL) {
-    //     task_atual->time = et     <--     COMO A GENTE CONSEGUE DETERMINAR A TASK ATUAL
-    // }
+    if (task == NULL) {
+        printf("Entro no if da Funcao 3");
+        return taskExec->remaining_execution_time;
+    }
+    printf("Ele ta vindo aqui? Funcao 3");
     return task->remaining_execution_time;
 }
 
