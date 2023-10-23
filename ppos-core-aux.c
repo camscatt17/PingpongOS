@@ -401,6 +401,15 @@ int after_mqueue_msgs (mqueue_t *queue) {
     return 0;
 }
 
+void print_tcb( task_t* task ) {
+    printf("\nId %d\n", &task->id);
+    printf("\nAwake Time %d\n", &task->awakeTime);
+    printf("\nEstimated Execution Time %d\n", &task->estimated_execution_time);
+    printf("\nPrioridade Estatica %d\n", &task->prioridade_statica);
+    printf("\nRemain Execution Time %d\n", &task->remaining_execution_time);
+    printf("\nState %c\n", &task->state);
+}
+
 void task_setprio(task_t *task, int prio) {
     if ((UNIX_PRIORIDADE_MINIMA <= prio) && (UNIX_PRIORIDADE_MAXIMA >= prio)) {
         if (NULL != task) 
