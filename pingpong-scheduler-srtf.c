@@ -42,10 +42,10 @@ void Body (void * arg)
   // se for o caso, esse campo pode ser trocado conforme a implementacao de cada equipe
   // o que importa eh esse loop sair somente se a tarefa realmente executou o X tempo que
   // foi indicado como seu tempo de execucao
-  while (taskExec->remaining_execution_time < task_get_eet(NULL)) {
+  while (taskExec->running_time < task_get_eet(NULL)) {
     end_time--;
     if ((last_printed_line+5) <= systime()) {
-      printf ("[%d]\t%s: interacao %d\t\t%d\n", systime(), (char *) arg, end_time, taskExec->remaining_execution_time) ;
+      printf ("[%d]\t%s: interacao %d\t\t%d\n", systime(), (char *) arg, end_time, taskExec->running_time) ;
       last_printed_line = systime();
     }
 
