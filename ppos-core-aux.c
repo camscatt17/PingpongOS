@@ -1,13 +1,32 @@
 #include "ppos.h"
 #include "ppos-core-globals.h"
+#include "ppos_disk.h"
+#include <signal.h>
+#include <sys/time.h>
 
 #define UNIX_PRIORIDADE_MINIMA -20
 #define UNIX_PRIORIDADE_MAXIMA 20
+
+#define _GNU_SOURCE
 
 
 // ****************************************************************************
 // Coloque aqui as suas modificações, p.ex. includes, defines variáveis, 
 // estruturas e funções
+
+#define TIMER_STARTING_SHOT_S 1
+#define TIMER_PERIOD_uS 1000
+#define DEFAULT_TASK_TICKS 40
+#define SIGALRM 14
+
+static void tickHandler(int signum);
+
+// estrutura que define um tratador de sinal (deve ser global ou static)
+struct sigaction action;
+
+// estrutura de inicialização to timer
+struct itimerval timer;
+
 
 
 // ****************************************************************************
@@ -16,6 +35,29 @@
 
 void before_ppos_init () {
     // put your customization here
+
+    action.sa_handler = tickHandler;
+    sigemptyset(&action.sa_mask);
+    action.sa_flags = 0;
+
+    if (sigaction(SIGALRM, &action, 0) < 0)
+    {
+        perror("Sigaction error: ");
+        exit(1);
+    }
+
+    // Timer initialization
+    timer.it_value.tv_sec = TIMER_STARTING_SHOT_S;
+    timer.it_value.tv_usec = 0;
+    timer.it_interval.tv_sec = 0;
+    timer.it_interval.tv_usec = TIMER_PERIOD_uS;
+
+    if (setitimer(0, &timer, 0) < 0)
+    {
+        perror("Setitimer error: ");
+        exit(1);
+    }
+
 #ifdef DEBUG
     printf("\ninit - BEFORE");
 #endif
@@ -33,8 +75,6 @@ void before_task_create (task_t *task ) {
 #ifdef DEBUG
     printf("\ntask_create - BEFORE - [%d]", task->id);
 #endif
-    printf("Vai atribuir valor pra task\n");
-    task->remaining_execution_time = 99999;
 }
 
 void after_task_create (task_t *task ) {
@@ -451,11 +491,9 @@ task_t * scheduler() {
 
 void task_set_eet (task_t *task, int et) {
     if (task == NULL) {
-        printf("Entro no if da Funcao 1");
         task = taskExec;
         task->time = et;
     }
-    printf("Ele ta vindo aqui? Funcao 1");
     task->estimated_execution_time = et;
     task->remaining_execution_time = et;
 }
@@ -463,20 +501,35 @@ void task_set_eet (task_t *task, int et) {
 
 int task_get_eet(task_t *task) {
     if (task == NULL) {
-        printf("Entro no if da Funcao 2");
         return taskExec->estimated_execution_time;
     }
-    printf("Ele ta vindo aqui? Funcao 2");
     return task->estimated_execution_time;
 }
 
 
 int task_get_ret(task_t *task) {
     if (task == NULL) {
-        printf("Entro no if da Funcao 3");
         return taskExec->remaining_execution_time;
     }
-    printf("Ele ta vindo aqui? Funcao 3");
     return task->remaining_execution_time;
 }
 
+static void tickHandler(int signum)
+{
+    static int iTaskTicksQty = DEFAULT_TASK_TICKS;
+
+    iTaskTicksQty--;
+    systemTime++;
+
+    if (0 >= iTaskTicksQty)
+    {
+        iTaskTicksQty = DEFAULT_TASK_TICKS;
+
+        if (taskExec != taskDisp)
+        {
+            task_yield();
+        }
+    }
+
+    return;
+}
