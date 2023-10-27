@@ -20,12 +20,15 @@
 #define SIGALRM 14
 
 static void tickHandler(int signum);
+static void metricsHandler(task_t *pstPreviousTask, task_t *pstNextTask);
 
 // estrutura que define um tratador de sinal (deve ser global ou static)
 struct sigaction action;
 
 // estrutura de inicialização to timer
 struct itimerval timer;
+
+static int uiTaskStartingTick = 0;
 
 
 
@@ -79,6 +82,14 @@ void before_task_create (task_t *task ) {
 
 void after_task_create (task_t *task ) {
     // put your customization here
+    if (task != NULL) {
+        task->estimated_execution_time = 99999;
+        task->remaining_execution_time = systime();
+
+        // printf("\n\n--------------------- INICIALIZO --------------------- %d\n\n", systime());
+        // print_tcb(task);
+    }
+    
 #ifdef DEBUG
     printf("\ntask_create - AFTER - [%d]", task->id);
 #endif
@@ -100,6 +111,11 @@ void after_task_exit () {
 
 void before_task_switch ( task_t *task ) {
     // put your customization here
+    // printf("\n\n--------------------- BEFORE --------------------- ");
+    // if (task != NULL) {
+    //     print_tcb(task);
+    // }
+    metricsHandler(taskExec, task);
 #ifdef DEBUG
     printf("\ntask_switch - BEFORE - [%d -> %d]", taskExec->id, task->id);
 #endif
@@ -107,6 +123,10 @@ void before_task_switch ( task_t *task ) {
 
 void after_task_switch ( task_t *task ) {
     // put your customization here
+    // printf("\n\n--------------------- AFTER --------------------- ");
+    // if (task != NULL) {
+    //     print_tcb(task);
+    // }
 #ifdef DEBUG
     printf("\ntask_switch - AFTER - [%d -> %d]", taskExec->id, task->id);
 #endif
@@ -491,11 +511,12 @@ task_t * scheduler() {
 
 void task_set_eet (task_t *task, int et) {
     if (task == NULL) {
-        task = taskExec;
-        task->time = et;
+        taskExec->prioridade_dinamica = et;
+
+        return;
     }
     task->estimated_execution_time = et;
-    task->remaining_execution_time = et;
+    // task->remaining_execution_time = et;
 }
 
 
@@ -516,20 +537,31 @@ int task_get_ret(task_t *task) {
 
 static void tickHandler(int signum)
 {
-    static int iTaskTicksQty = DEFAULT_TASK_TICKS;
-
-    iTaskTicksQty--;
     systemTime++;
-
-    if (0 >= iTaskTicksQty)
-    {
-        iTaskTicksQty = DEFAULT_TASK_TICKS;
-
-        if (taskExec != taskDisp)
-        {
+    if (taskExec != NULL) {
+        taskExec->remaining_execution_time++;
+    }
+    // se for uma tarefa de usuario (main, pang, ..., pung)
+    if(taskExec != taskDisp) {
+        // diminui o quantum da tarefa
+        taskExec->time--;
+        // se o quantum da tarefa terminou
+        if(taskExec->time == 0) {
+            // libera o processador para proxima tarefa
             task_yield();
         }
     }
+}
+
+static void metricsHandler(task_t *pstPreviousTask, task_t *pstNextTask)
+{
+    // printf("\n\n--------------------- ENTRO NESSA FUNCAO DOIDA ------------------------\n\n");
+
+    (pstPreviousTask->remaining_execution_time) += (systemTime - uiTaskStartingTick);
+
+    (pstNextTask->uiActivations)++;
+
+    uiTaskStartingTick = systemTime;
 
     return;
 }

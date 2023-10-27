@@ -42,6 +42,7 @@ void Body (void * arg)
   // se for o caso, esse campo pode ser trocado conforme a implementacao de cada equipe
   // o que importa eh esse loop sair somente se a tarefa realmente executou o X tempo que
   // foi indicado como seu tempo de execucao
+  // print_tcb(taskExec);
   while (taskExec->remaining_execution_time < task_get_eet(NULL)) {
     end_time--;
     if ((last_printed_line+5) <= systime()) {
@@ -55,6 +56,7 @@ void Body (void * arg)
       sprintf(new_task_name, "NEWTask[%2d]", new_tasks_count);
       printf("Criando NOVA tarefa: %s\n", new_task_name);
       task_create (&new_user_tasks[new_tasks_count], Body, &new_task_name) ;
+
       task_set_eet(&new_user_tasks[new_tasks_count], 15);
       new_tasks_count++;
       task_yield();
@@ -87,7 +89,13 @@ int main (int argc, char *argv[])
   for (i=0; i<USER_TASKS_MAX; i++) {
     sprintf(&user_tasks_names[i][0], "UTask[%2d]", i);
     printf("Criando tarefa: %s\n", &user_tasks_names[i]);
+    // printf("\n\n--------------------- VAI CRIAR UMA TAREFA --------------------- \n\n");
     task_create (&user_tasks[i], Body, &user_tasks_names[i]) ;
+
+    // if (taskExec != NULL) {
+    //     print_tcb(taskExec);
+    //   }
+    // printf("\n\n--------------------- CRIO UMA TAREFA --------------------- \n\n");
     task_set_eet(&user_tasks[i], user_tasks_execution_time[i]);
   }
 

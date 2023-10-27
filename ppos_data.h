@@ -29,11 +29,14 @@ typedef struct task_t
 
    // ///////////////// Tempo de execucao das tarefas
    int prioridade_statica;
+   int prioridade_dinamica;
 
    // ///////////////// Tempo de execucao das tarefas
    int time;
    int estimated_execution_time;
    int remaining_execution_time;
+   int uiProcessorTicks;
+   int uiActivations;
    
 } task_t ;
 
