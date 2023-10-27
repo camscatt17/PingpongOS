@@ -1,5 +1,6 @@
 tafera_parteA:
-	gcc -Wall pingpong-scheduler-srtf.c ppos-core-aux.c libppos_static.a -o tarefa_parteA -lrt
+	gcc -c -g ppos-core-aux.c
+	gcc -Wall pingpong-scheduler-srtf.c ppos-core-aux.o libppos_static.a -o tarefa_parteA -lrt -g
 	./tarefa_parteA
 
 tafera_teste_contab:

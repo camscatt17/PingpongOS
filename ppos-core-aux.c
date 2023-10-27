@@ -505,15 +505,16 @@ task_t * scheduler() {
         task_t* next_task = readyQueue;
         task_t* temp = readyQueue;
         int shortest_time = 99999999;
-        while (temp->next != readyQueue) {
+        do
+        {
             // printf("Entro no while\n");
-            if (temp->estimated_execution_time < shortest_time) {
+            if (temp->estimated_execution_time < shortest_time && temp->id != 0) {
                 shortest_time = temp->estimated_execution_time;
                 next_task = temp;
                 // printf("Entro no if\n");
             }
             temp = temp->next;
-        }
+        } while (temp != readyQueue);
         
         return next_task;
     }
