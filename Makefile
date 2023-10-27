@@ -7,4 +7,4 @@ tafera_teste_contab:
 	./tafera_teste_contab
 
 clean:
-	rm teste_tarefa1_scheduler_teste_professor teste_tarefa1_scheduler
+	rm tafera_teste_contab tarefa_parteA
