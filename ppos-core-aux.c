@@ -14,24 +14,18 @@
 // Coloque aqui as suas modificações, p.ex. includes, defines variáveis, 
 // estruturas e funções
 
-#define TIMER_STARTING_SHOT_S 1
-#define TIMER_PERIOD_uS 1000
-#define DEFAULT_TASK_TICKS 40
-#define SIGALRM 14
-#define UNIX_AGING_FACTOR -1
+#define SIGNAL_ALARM 14
 
-static void tickHandler(int signum);
-static void metricsHandler(task_t *pstPreviousTask, task_t *pstNextTask);
-static void printTaskInfo(void);
-static task_t *getHighestPrioTaks(task_t *pstFirstTask);
+void setSignal();
+void setTimer();
+void signalHandler(int signum);
+void metricsHandler(task_t *pstPreviousTask, task_t *pstNextTask);
+void printTaskInfo(void);
 
-// estrutura que define um tratador de sinal (deve ser global ou static)
 struct sigaction action;
-
-// estrutura de inicialização to timer
 struct itimerval timer;
 
-static int uiTaskStartingTick = 0;
+int uiTaskStartingTick = 0;
 
 
 
@@ -41,28 +35,8 @@ static int uiTaskStartingTick = 0;
 
 void before_ppos_init () {
     // put your customization here
-
-    action.sa_handler = tickHandler;
-    sigemptyset(&action.sa_mask);
-    action.sa_flags = 0;
-
-    if (sigaction(SIGALRM, &action, 0) < 0)
-    {
-        perror("Sigaction error: ");
-        exit(1);
-    }
-
-    // Timer initialization
-    timer.it_value.tv_sec = TIMER_STARTING_SHOT_S;
-    timer.it_value.tv_usec = 0;
-    timer.it_interval.tv_sec = 0;
-    timer.it_interval.tv_usec = TIMER_PERIOD_uS;
-
-    if (setitimer(ITIMER_REAL, &timer, 0) < 0)
-    {
-        perror("Setitimer error: ");
-        exit(1);
-    }
+    setSignal();
+    setTimer();
 
 #ifdef DEBUG
     printf("\ninit - BEFORE");
@@ -87,12 +61,8 @@ void after_task_create (task_t *task ) {
     // put your customization here
     if (task != NULL) {
         task->estimated_execution_time = 99999;
-        // task->remaining_execution_time = systime();
-
-        // printf("\n\n--------------------- INICIALIZO --------------------- %d\n\n", systime());
-        // print_tcb(task);
+        task->time = 20;
     }
-    task->time = 400;
     
 #ifdef DEBUG
     printf("\ntask_create - AFTER - [%d]", task->id);
@@ -101,10 +71,10 @@ void after_task_create (task_t *task ) {
 
 void before_task_exit () {
     // put your customization here
-
-    taskExec->remaining_execution_time = (systemTime - taskExec->remaining_execution_time);
-
-    printTaskInfo();
+    if (taskExec != NULL) { 
+        taskExec->remaining_execution_time = (systemTime - taskExec->remaining_execution_time);
+        printTaskInfo();
+    }
 #ifdef DEBUG
     printf("\ntask_exit - BEFORE - [%d]", taskExec->id);
 #endif
@@ -120,12 +90,10 @@ void after_task_exit () {
 
 void before_task_switch ( task_t *task ) {
     // put your customization here
-    // printf("\n\n--------------------- BEFORE --------------------- ");
-    // if (task != NULL) {
-    //     print_tcb(task);
-    // }
-    task->time = 400;
-    metricsHandler(taskExec, task);
+    if (task != NULL) {
+        task->time = 20;
+        metricsHandler(taskExec, task);
+    }
 #ifdef DEBUG
     printf("\ntask_switch - BEFORE - [%d -> %d]", taskExec->id, task->id);
 #endif
@@ -133,18 +101,13 @@ void before_task_switch ( task_t *task ) {
 
 void after_task_switch ( task_t *task ) {
     // put your customization here
-    // printf("\n\n--------------------- AFTER --------------------- ");
-    // if (task != NULL) {
-    //     print_tcb(task);
-    // }
 #ifdef DEBUG
     printf("\ntask_switch - AFTER - [%d -> %d]", taskExec->id, task->id);
 #endif
 }
 
 void before_task_yield () {
-    // put your customization here
-    // taskExec->time = 20;
+    // put your customization hereW
 #ifdef DEBUG
     printf("\ntask_yield - BEFORE - [%d]", taskExec->id);
 #endif
@@ -505,8 +468,7 @@ task_t * scheduler() {
         task_t* next_task = readyQueue;
         task_t* temp = readyQueue;
         int shortest_time = 99999999;
-        do
-        {
+        do {
             // printf("Entro no while\n");
             if (temp->estimated_execution_time < shortest_time && temp->id != 0) {
                 shortest_time = temp->estimated_execution_time;
@@ -521,32 +483,29 @@ task_t * scheduler() {
     return NULL;
 }
 
-// task_t *scheduler()
-// {
-//     task_t *pstNextTask = readyQueue;
+// -------------------- Colocando minhas funcoes daqui pra baixo
+void setSignal() {
+    action.sa_handler = signalHandler;
+    sigemptyset(&action.sa_mask);
+    action.sa_flags = 0;
 
-//     if (NULL != readyQueue)
-//     {
-//         pstNextTask = getHighestPrioTaks(readyQueue);
-//         pstNextTask->prioridade_dinamica = pstNextTask->prioridade_statica;
+    if (sigaction(SIGNAL_ALARM, &action, 0) < 0) {
+        perror ("Erro em sigaction: ") ;
+        exit (1) ;
+    }
+}
 
-//         task_t *pstListRunner = readyQueue;
-//         task_t *pstFirstTask = readyQueue;
+void setTimer() {
+    timer.it_value.tv_sec = 1;
+    timer.it_value.tv_usec = 0;
+    timer.it_interval.tv_sec = 0;
+    timer.it_interval.tv_usec = 1000;
 
-//         // The tasks list is a circular list, so this is the way to run through it
-//         do
-//         {
-//             if (pstListRunner != pstNextTask)
-//             {
-//                 pstListRunner->prioridade_dinamica += UNIX_AGING_FACTOR;
-//             }
-
-//             pstListRunner = pstListRunner->next;
-//         } while (pstFirstTask != pstListRunner);
-//     }
-
-//     return pstNextTask;
-// }
+    if (setitimer(ITIMER_REAL, &timer, 0) < 0) {
+        perror ("Erro em setitimer: ") ;
+        exit (1) ;
+    }
+}
 
 void task_set_eet (task_t *task, int et) {
     if (task == NULL) {
@@ -555,7 +514,6 @@ void task_set_eet (task_t *task, int et) {
         return;
     }
     task->estimated_execution_time = et;
-    // task->remaining_execution_time = et;
 }
 
 
@@ -574,8 +532,7 @@ int task_get_ret(task_t *task) {
     return task->remaining_execution_time;
 }
 
-static void tickHandler(int signum)
-{
+void signalHandler(int signum) {
     systemTime++;
     if (taskExec != NULL) {
         taskExec->remaining_execution_time++;
@@ -592,10 +549,7 @@ static void tickHandler(int signum)
     }
 }
 
-static void metricsHandler(task_t *pstPreviousTask, task_t *pstNextTask)
-{
-    // printf("\n\n--------------------- ENTRO NESSA FUNCAO DOIDA ------------------------\n\n");
-
+void metricsHandler(task_t *pstPreviousTask, task_t *pstNextTask) {
     (pstPreviousTask->remaining_execution_time) += (systemTime - uiTaskStartingTick);
 
     (pstNextTask->uiActivations)++;
@@ -603,13 +557,7 @@ static void metricsHandler(task_t *pstPreviousTask, task_t *pstNextTask)
     uiTaskStartingTick = systemTime;
 }
 
-static void printTaskInfo(void)
-{
-    // if (0 == taskExec->id)
-    // {
-    //     finishDiskTask();
-    // }
-
+void printTaskInfo(void) {
     printf("Task %d exit: Execution time: %d ms Processor time: %d ms %d activations\n",
         taskExec->id,
         taskExec->remaining_execution_time,
@@ -617,22 +565,4 @@ static void printTaskInfo(void)
         taskExec->uiActivations);
 
     return;
-}
-
-static task_t *getHighestPrioTaks(task_t *pstFirstTask)
-{
-    task_t *pstHighestTask = pstFirstTask;
-    task_t *pstListRunner = pstFirstTask;
-
-    do
-    {
-        if (pstListRunner->prioridade_dinamica < pstHighestTask->prioridade_dinamica)
-        {
-            pstHighestTask = pstListRunner;
-        }
-
-        pstListRunner = pstListRunner->next;
-    } while (pstFirstTask != pstListRunner);
-
-    return pstHighestTask;
 }
