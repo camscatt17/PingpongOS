@@ -4,9 +4,6 @@
 #include <signal.h>
 #include <sys/time.h>
 
-#define UNIX_PRIORIDADE_MINIMA -20
-#define UNIX_PRIORIDADE_MAXIMA 20
-
 #define _GNU_SOURCE
 
 
@@ -19,15 +16,9 @@
 void setSignal();
 void setTimer();
 void signalHandler(int signum);
-void metricsHandler(task_t *pstPreviousTask, task_t *pstNextTask);
-void printTaskInfo(void);
 
 struct sigaction action;
 struct itimerval timer;
-
-int uiTaskStartingTick = 0;
-
-
 
 // ****************************************************************************
 
@@ -35,6 +26,8 @@ int uiTaskStartingTick = 0;
 
 void before_ppos_init () {
     // put your customization here
+
+    // Inicializacao do sinal e do timer
     setSignal();
     setTimer();
 
@@ -59,9 +52,12 @@ void before_task_create (task_t *task ) {
 
 void after_task_create (task_t *task ) {
     // put your customization here
+
+    // Quando a tarefa for criada, inicializa o tempo de execucao dela, o quantum e quando ela foi iniciada, de acordo com o "relogio" do sinal
     if (task != NULL) {
         task->estimated_execution_time = 99999;
         task->time = 20;
+        task->total_time = systemTime;
     }
     
 #ifdef DEBUG
@@ -71,10 +67,10 @@ void after_task_create (task_t *task ) {
 
 void before_task_exit () {
     // put your customization here
-    if (taskExec != NULL) { 
-        taskExec->remaining_execution_time = (systemTime - taskExec->remaining_execution_time);
-        printTaskInfo();
-    }
+
+    // Quando a tarefa acabar, printa o resultado dela
+    if (taskExec != NULL)
+        printf("Task %d exit: Execution time: %d ms Processor time: %d ms %d activations\n", taskExec->id, systemTime - taskExec->total_time, taskExec->estimated_execution_time, taskExec->quantidade_chamada_task);
 #ifdef DEBUG
     printf("\ntask_exit - BEFORE - [%d]", taskExec->id);
 #endif
@@ -82,7 +78,6 @@ void before_task_exit () {
 
 void after_task_exit () {
     // put your customization here
-    
 #ifdef DEBUG
     printf("\ntask_exit - AFTER- [%d]", taskExec->id);
 #endif
@@ -90,9 +85,11 @@ void after_task_exit () {
 
 void before_task_switch ( task_t *task ) {
     // put your customization here
+
+    // Quando a tarefa receber o processador, inicializa o quantum dela para 20 e aumenta a quantidade de vezes em que ela foi chamada
     if (task != NULL) {
         task->time = 20;
-        metricsHandler(taskExec, task);
+        (task->quantidade_chamada_task)++;
     }
 #ifdef DEBUG
     printf("\ntask_switch - BEFORE - [%d -> %d]", taskExec->id, task->id);
@@ -435,45 +432,27 @@ int after_mqueue_msgs (mqueue_t *queue) {
     return 0;
 }
 
+// ///////////////// Printar os dados de uma task
 void print_tcb( task_t* task ) {
-    printf("\nId %d\n", &task->id);
-    printf("\nAwake Time %d\n", &task->awakeTime);
-    printf("\nEstimated Execution Time %d\n", &task->estimated_execution_time);
-    printf("\nPrioridade Estatica %d\n", &task->prioridade_statica);
-    printf("\nRemain Execution Time %d\n", &task->remaining_execution_time);
-    printf("\nState %c\n", &task->state);
+    printf("\nId %d\n", task->id);
+    printf("\nAwake Time %d\n", task->awakeTime);
+    printf("\nEstimated Execution Time %d\n", task->estimated_execution_time);
+    printf("\nRemain Execution Time %d\n", task->remaining_execution_time);
+    printf("\nState %c\n", task->state);
 }
 
-void task_setprio(task_t *task, int prio) {
-    if ((UNIX_PRIORIDADE_MINIMA <= prio) && (UNIX_PRIORIDADE_MAXIMA >= prio)) {
-        if (NULL != task) 
-            task->prioridade_statica = prio;
-        else
-            taskExec->prioridade_statica = prio;
-    }
-
-    return;
-}
-
-int task_getprio(task_t *task) {
-    if (task == NULL) {
-        return taskExec->prioridade_statica;
-    }
-    return task->prioridade_statica;
-}
-
+// ///////////////// Scheduler para sempre pegar a tarefa em que tem o menor tempo de execucao, excluindo a tarefa principal
 task_t * scheduler() {
     if (readyQueue != NULL) {
-        // printf("Entro na funcao scheduler\n");
+        // Se houver somente a tarefa main, vai retornar ela mesma
         task_t* next_task = readyQueue;
         task_t* temp = readyQueue;
         int shortest_time = 99999999;
         do {
-            // printf("Entro no while\n");
+            // Resgatar a tarefa que tem o menor tempo de execucao, excluindo a tarefa main
             if (temp->estimated_execution_time < shortest_time && temp->id != 0) {
                 shortest_time = temp->estimated_execution_time;
                 next_task = temp;
-                // printf("Entro no if\n");
             }
             temp = temp->next;
         } while (temp != readyQueue);
@@ -483,7 +462,31 @@ task_t * scheduler() {
     return NULL;
 }
 
-// -------------------- Colocando minhas funcoes daqui pra baixo
+// ///////////////// Seta o tempo de execucao da tarefa
+void task_set_eet (task_t *task, int et) {
+    if (task == NULL) {
+        taskExec->estimated_execution_time = et;
+
+        return;
+    }
+    task->estimated_execution_time = et;
+}
+
+// ///////////////// Resgata o tempo de execucao da tarefa
+int task_get_eet(task_t *task) {
+    if (task == NULL)
+        return taskExec->estimated_execution_time;
+    return task->estimated_execution_time;
+}
+
+// ///////////////// Resgata o tempo estimado de execucao da tarefa
+int task_get_ret(task_t *task) {
+    if (task == NULL)
+        return taskExec->remaining_execution_time;
+    return task->remaining_execution_time;
+}
+
+// ///////////////// Inicializa o signal
 void setSignal() {
     action.sa_handler = signalHandler;
     sigemptyset(&action.sa_mask);
@@ -495,6 +498,7 @@ void setSignal() {
     }
 }
 
+// ///////////////// Inicializa o timer
 void setTimer() {
     timer.it_value.tv_sec = 1;
     timer.it_value.tv_usec = 0;
@@ -507,62 +511,17 @@ void setTimer() {
     }
 }
 
-void task_set_eet (task_t *task, int et) {
-    if (task == NULL) {
-        taskExec->estimated_execution_time = et;
-
-        return;
-    }
-    task->estimated_execution_time = et;
-}
-
-
-int task_get_eet(task_t *task) {
-    if (task == NULL) {
-        return taskExec->estimated_execution_time;
-    }
-    return task->estimated_execution_time;
-}
-
-
-int task_get_ret(task_t *task) {
-    if (task == NULL) {
-        return taskExec->remaining_execution_time;
-    }
-    return task->remaining_execution_time;
-}
-
+// ///////////////// Funcao em que vai ser chamada junto com o sinal
 void signalHandler(int signum) {
+    // Incrementa o "relogio"
     systemTime++;
-    if (taskExec != NULL) {
+    // Se a tarefa atual nao for nula, incrementa o tempo em que ela estah sendo executada
+    if (taskExec != NULL)
         taskExec->remaining_execution_time++;
-    }
-    // se for uma tarefa de usuario (main, pang, ..., pung)
+    // Se nao for uma tarefa de sistema, reduz o quantum da tarefa e se chegar a 0, retorna ela para o readyQueue
     if(taskExec != taskDisp) {
-        // diminui o quantum da tarefa
         taskExec->time--;
-        // se o quantum da tarefa terminou
-        if(taskExec->time == 0) {
-            // libera o processador para proxima tarefa
+        if(taskExec->time == 0)
             task_yield();
-        }
     }
-}
-
-void metricsHandler(task_t *pstPreviousTask, task_t *pstNextTask) {
-    (pstPreviousTask->remaining_execution_time) += (systemTime - uiTaskStartingTick);
-
-    (pstNextTask->uiActivations)++;
-
-    uiTaskStartingTick = systemTime;
-}
-
-void printTaskInfo(void) {
-    printf("Task %d exit: Execution time: %d ms Processor time: %d ms %d activations\n",
-        taskExec->id,
-        taskExec->remaining_execution_time,
-        taskExec->estimated_execution_time,
-        taskExec->uiActivations);
-
-    return;
 }

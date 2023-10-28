@@ -26,17 +26,16 @@ typedef struct task_t
 
    // ... (outros campos deve ser adicionados APOS esse comentario)
 
-
-   // ///////////////// Tempo de execucao das tarefas
-   int prioridade_statica;
-   int prioridade_dinamica;
-
-   // ///////////////// Tempo de execucao das tarefas
+   // Quantum da tarefa
    int time;
+   // Tempo de execucao da tarefa
    int estimated_execution_time;
+   // Tempo em que a tarefa estah sendo executada
    int remaining_execution_time;
-   int uiProcessorTicks;
-   int uiActivations;
+   // Tempo total de acordo com o "relogio" do sinal em que a tarefa foi executada
+   int total_time;
+   // Quantidade de vezes em que a tarefa recebeu o processador
+   int quantidade_chamada_task;
    
 } task_t ;
 
